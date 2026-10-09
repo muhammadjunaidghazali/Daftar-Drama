@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Dafter Drama - Premium Edition</title>
+  <meta name="theme-color" content="#0c0a09">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <!-- Inline PWA Web Manifest (Gold Theme) -->
+  <link rel="manifest" href='data:application/manifest+json,{"name":"Dafter Drama","short_name":"DafterDrama","start_url":".","display":"standalone","background_color":"#0c0a09","theme_color":"#e3b35a","icons":[{"src":"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23e3b35a%22/><text y=%2265%22 font-size=%2250%22 x=%2225%22 fill=%22black%22>☕</text></svg>","sizes":"192x192 512x512","type":"image/svg+xml"}]}'>
+  
+  <!-- PeerJS for WebRTC Multiplayer -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script>
+    if (typeof Peer === "undefined") {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"><\/script>');
+    }
+  </script>
+
+  <style>
+    /* Premium Dark Theme Variables[cite: 15] */
+    :root {
+      --bg: #0c0a09;
+      --surface: #1c1510;
+      --surface-light: #2a2018;
+      --gold: #e3b35a;
+      --gold-dim: #9c7b3e;
+      --text: #f5ecd8;
+      --text-muted: #8c7d6f;
+      --card-white: #fdfbf7;
+      --card-text: #1a110a;
+      --kit-bg: #062016;
+      --kit-border: #10b981;
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; overscroll-behavior: none; }
+
+    /* Layout & Navigation */
+    #app { flex: 1; display: flex; flex-direction: column; width: 100%; max-width: 600px; margin: 0 auto; position: relative; padding-bottom: 80px; }
+    
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 20px; position: sticky; top: 0; background: var(--bg); z-index: 10; }
+    .header-btn { background: none; border: none; color: var(--text); font-size: 1rem; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .header-btn svg { width: 18px; height: 18px; fill: currentColor; }
+    .header-title { font-weight: 700; letter-spacing: 1px; color: var(--text); text-transform: uppercase; font-size: 0.9rem; }
+    
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--surface-light); display: flex; justify-content: space-around; padding: 12px 0 calc(24px + env(safe-area-inset-bottom)) 0; z-index: 50; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-muted); cursor: pointer; font-size: 0.7rem; flex: 1; transition: color 0.2s; }
+    .nav-item svg { width: 24px; height: 24px; fill: currentColor; }
+    .nav-item.active { color: var(--gold); }
+
+    /* Typography & Inputs */
+    h1.logo { font-size: 3.2rem; font-weight: 800; line-height: 1.1; margin-bottom: 30px; letter-spacing: -1px; text-align: left; }
+    .logo-accent { color: var(--text); display: block; }
+    
+    .input-group { margin-bottom: 20px; }
+    .input-label { display: block; color: var(--text); font-size: 0.9rem; margin-bottom: 8px; font-weight: 500; }
+    .input { background: var(--surface); border: 1px solid var(--surface-light); color: var(--gold); padding: 16px; border-radius: 12px; font-size: 1.1rem; width: 100%; outline: none; transition: border-color 0.2s; }
+    .input:focus { border-color: var(--gold); }
+    .input::placeholder { color: var(--text-muted); }
+
+    /* Buttons */
+    .btn { background: var(--gold); color: #000; border: none; padding: 16px 24px; border-radius: 999px; font-weight: 700; font-size: 1rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.1s, opacity 0.2s; width: 100%; }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-outline { background: transparent; border: 2px solid var(--gold); color: var(--gold); }
+    .btn-row { display: flex; gap: 12px; }
+
+    /* Player List */
+    .list-container { background: var(--surface); border-radius: var(--radius); padding: 10px; margin-bottom: 20px; }
+    .list-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid var(--surface-light); }
+    .list-item:last-child { border-bottom: none; }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem; color: #fff; }
+    .avatar.c1 { background: #60a5fa; } .avatar.c2 { background: #34d399; } .avatar.c3 { background: #f87171; } .avatar.c4 { background: #fbbf24; }
+    .player-name { flex: 1; font-weight: 500; font-size: 1.05rem; }
+
+    /* Cards */
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .section-title { font-size: 1rem; color: var(--text); font-weight: 600; }
+    .timer-text { color: var(--gold); font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 4px; }
+
+    .card-prompt { background: var(--surface); border: 1px solid var(--gold); border-radius: var(--radius); padding: 24px; margin-bottom: 24px; position: relative; min-height: 180px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .card-prompt .text { font-size: 1.25rem; font-weight: 500; line-height: 1.5; color: var(--text); }
+    .card-prompt .tag { color: var(--gold); font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; text-align: center; margin-top: 20px; }
+
+    .cards-scroll { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 15px; scroll-snap-type: x mandatory; margin-bottom: 20px; }
+    .cards-scroll::-webkit-scrollbar { display: none; }
+    
+    .card-answer { background: var(--card-white); color: var(--card-text); border-radius: 16px; padding: 20px; min-width: 160px; width: 160px; height: 220px; flex-shrink: 0; scroll-snap-align: start; cursor: pointer; position: relative; display: flex; flex-direction: column; border: 3px solid transparent; transition: border-color 0.2s, transform 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    .card-answer .text { font-size: 1.05rem; font-weight: 600; line-height: 1.4; flex: 1; }
+    .card-answer.selected { border-color: var(--gold); transform: translateY(-6px); }
+    .card-answer .check { position: absolute; bottom: 12px; right: 12px; width: 28px; height: 28px; background: var(--gold); border-radius: 50%; display: none; align-items: center; justify-content: center; color: #000; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    .card-answer.selected .check { display: flex; }
+
+    .card-kit { background: var(--kit-bg); color: #fff; border: 1px solid var(--kit-border); border-radius: 16px; padding: 20px; margin-bottom: 12px; cursor: pointer; display: flex; flex-direction: column; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: transform 0.2s; }
+    .card-kit:active { transform: scale(0.98); }
+    .card-kit .tag { color: var(--kit-border); font-size: 0.75rem; font-weight: 800; margin-bottom: 8px; letter-spacing: 1px; }
+    .card-kit .title { font-weight: 700; font-size: 1.1rem; margin-bottom: 6px; }
+    .card-kit .script { font-style: italic; opacity: 0.9; font-size: 0.95rem; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-top: 8px; }
+
+    /* Modals & Layouts */
+    .screen { display: none; padding: 0 20px; animation: fadeIn 0.3s ease; flex: 1; }
+    .screen.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .badge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; text-align: center; }
+    .badge-icon { background: var(--surface); border: 1px solid var(--gold-dim); border-radius: 16px; padding: 20px 10px; margin-bottom: 8px; color: var(--gold); font-size: 1.5rem; }
+    .badge-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
+    
+    .status-box { background: var(--surface); padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px; border: 1px solid var(--surface-light); }
+  </style>
+<base target="_blank">
+</head>
+<body>
+
+  <main id="app">
+    <!-- Screens injected by render() -->
+  </main>
+
+  <nav class="bottom-nav" id="bottomNav" style="display: none;">
+    <div class="nav-item" id="tab-home" onclick="switchTab('home')">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      Lobby
+    </div>
+    <div class="nav-item" id="tab-game" onclick="switchTab('game')">
+      <svg viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 6.5 19.5 6.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+      Table
+    </div>
+    <div class="nav-item" id="tab-leaderboard" onclick="switchTab('leaderboard')">
+      <svg viewBox="0 0 24 24"><path d="M19 3h-3V1h-4v2H8V1H4v2c-1.1 0-2 .9-2 2v6c0 2.21 1.79 4 4 4h2.15c.81 2.37 2.94 4.07 5.52 4.25V21H8v2h8v-2h-3.67v-1.75c2.58-.18 4.71-1.88 5.52-4.25H20c2.21 0 4-1.79 4-4V5c0-1.1-.9-2-2-2zm-13 8H4V5h2v6zm14 0h-2V5h2v6z"/></svg>
+      Profile
+    </div>
+    <div class="nav-item" id="tab-guide" onclick="switchTab('guide')">
+      <svg viewBox="0 0 24 24"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>
+      Guide
+    </div>
+  </nav>
+
+  <script>
+    /* =======================================================
+       FULL CARD DATASETS[cite: 5, 6, 7, 8, 9, 10, 11, 12, 13]
+       ======================================================= */
+    const PROMPTS = [
+      { t: "GUP-SHUP", q: "The WhatsApp group went silent the moment I walked in because they were discussing _______." },
+      { t: "GUP-SHUP", q: "\"Main kisi ki burai nahi karti, but did you hear about _______?\"" },
+      { t: "GUP-SHUP", q: "By the time the news reached the third floor, \"a small delay in my report\" had become _______." },
+      { t: "GUP-SHUP", q: "Kirdar-kushi at the lunch table always starts with \"Waise toh achhe hain, but _______.\"" },
+      { t: "GUP-SHUP", q: "The real reason I eat lunch alone at my desk is _______." },
+      { t: "TANGEIN KHENCHNA", q: "I presented my idea. My rival said, \"Interesting, but _______\" and then presented it as their own." },
+      { t: "TANGEIN KHENCHNA", q: "When one crab tries to climb out of the bucket, the others _______." },
+      { t: "TANGEIN KHENCHNA", q: "Congratulations on your promotion! Now everyone is saying it only happened because of _______." },
+      { t: "TANGEIN KHENCHNA", q: "Instead of helping the new hire, the team _______." },
+      { t: "TANGEIN KHENCHNA", q: "Boss said, \"Hum sab ek family hain,\" right before asking me to _______." },
+      { t: "SIFARISH", q: "On paper the job was open to merit. In reality, it went to the one with _______." },
+      { t: "SIFARISH", q: "\"Don't worry, your work will be done. My cousin's friend's uncle just needs _______.\"" },
+      { t: "SIFARISH", q: "After three rounds of interviews, I discovered the post had already been filled by _______." },
+      { t: "SIFARISH", q: "I stopped trying so hard at work because _______." },
+      { t: "SIFARISH", q: "The HR policy says one thing. The parchi says _______." },
+      { t: "SAWAAL-JAWAAB", q: "At the office Eid lunch, an aunty asked, \"Beta, shaadi kab kar rahe ho?\" I smiled and said _______." },
+      { t: "SAWAAL-JAWAAB", q: "\"Tankhwah kitni milti hai?\" is a question I'd rather answer with _______." },
+      { t: "SAWAAL-JAWAAB", q: "\"Bacche kab plan kar rahe ho?\" The most polite reply is _______." },
+      { t: "SAWAAL-JAWAAB", q: "My boundary has three steps: smile, say _______, and change the topic." },
+      { t: "SAWAAL-JAWAAB", q: "Before my first cup of chai I was asked about _______." },
+      { t: "GHARANA & CLASS", q: "My English isn't perfect, but my _______ is." },
+      { t: "GHARANA & CLASS", q: "In the meeting, someone corrected my pronunciation of _______." },
+      { t: "GHARANA & CLASS", q: "\"Aap kis area se hain?\" is really asking about _______." },
+      { t: "GHARANA & CLASS", q: "The boss only invites people from \"the right school\" to _______." },
+      { t: "GHARANA & CLASS", q: "Apparently, being \"polished\" in this office requires _______." },
+      { t: "KONA POLITICS", q: "I don't smoke, but I stood at the smoking corner for 20 minutes because _______." },
+      { t: "KONA POLITICS", q: "The most important decisions are made at _______, not in the meeting room." },
+      { t: "KONA POLITICS", q: "I skipped the after-office dinner, and the next day everyone said _______." },
+      { t: "KONA POLITICS", q: "\"Arre chalo, ek chai pee lo!\" is how peer pressure speaks. My reply: _______." },
+      { t: "KONA POLITICS", q: "Not being invited to the tea-break clique made me _______." },
+      { t: "BURNOUT & BALANCE", q: "What is the first sign you need a holiday? _______." },
+      { t: "BURNOUT & BALANCE", q: "I answered an \"urgent\" email at 2 a.m. and the reply was _______." },
+      { t: "BURNOUT & BALANCE", q: "My body knew I was burnt out when _______." },
+      { t: "BURNOUT & BALANCE", q: "Stress tip: when the boss sends \"Quick call?\" at 11 p.m., _______." },
+      { t: "BURNOUT & BALANCE", q: "Work-life balance means [PICK 2] _______ on weekdays and _______ on weekends." },
+      { t: "BURNOUT & BALANCE", q: "My doctor says my headaches are caused by [PICK 2] _______ and _______." },
+      { t: "BURNOUT & BALANCE", q: "Being \"always available\" is not dedication. It is _______." },
+      { t: "BURNOUT & BALANCE", q: "After years of saying \"Haan ji, ho jayega,\" my calendar looks like _______." },
+      { t: "BURNOUT & BALANCE", q: "My perfect Friday: [PICK 2] _______ followed by _______." },
+      { t: "BURNOUT & BALANCE", q: "Load-shedding hit the office and, finally, _______." }
+    ];
+
+    const ANSWERS = [
+      "A rumor that began as \"ek chhoti si baat.\"", "\"Maine toh kuch nahi kaha, sirf suna hai.\"",
+      "A screenshot sent to the wrong group.", "The colleague who knows everyone's business.",
+      "\"Sab ko pata hai, bas aap ko nahi.\"", "A character assassination disguised as lunch.",
+      "\"Main kisi ko bataunga nahi, but...\"", "47 unread messages in the \"Office Family\" group.",
+      "The office grapevine that knows more than HR.", "A WhatsApp group with the boss removed.",
+      "Inventing a love story between two innocent colleagues.", "Breaking news at the chai counter.",
+      "Smiling to your face and smiling more behind your back.", "\"Friendly concern\" that is actually a verdict.",
+      "Saying \"Allah maaf kare\" and then spreading the story.", "The lunchroom clique's weekly verdict.",
+      "A nine-minute forwarded voice note.", "Nobody's version of the story matching.",
+      "Taking credit in the final presentation.", "\"Itni mehnat ki kya zaroorat thi?\"",
+      "A mysteriously deleted shared folder.", "Being \"accidentally\" left off the meeting invite.",
+      "Faint praise with a knife in it.", "The colleague who claps loudest and plots quietest.",
+      "Mocking the person who stays late, then asking to see their work.", "Jealousy dressed up as advice.",
+      "Pulling the ladder up after climbing it.", "Sharing only half the instructions.",
+      "\"Bas thora sa concern tha, boss.\"", "\"Pehle apna kaam sambhal lo, phir doosron ko sikhana.\"",
+      "Calling hard work \"chamchagiri.\"", "A team that only celebrates when you fail.",
+      "A cold, tight \"Mubarak ho.\"", "Whispering \"Boss ka favourite hai\" after every win.",
+      "Counting your leave days out loud.", "Celebrating a colleague's win out loud.",
+      "A parchi with a very important name on it.", "\"Meri jaan-pehchaan hai.\"",
+      "A phone call from a cousin's brother-in-law's friend.", "A degree nobody asked for and a surname everybody asked for.",
+      "An interview that was only a formality.", "A promotion based on whose wedding you attended.",
+      "\"Aap ka kaam ho jayega, bas ek phone karna parega.\"", "A merit list that changed overnight.",
+      "Learned helplessness: \"Kuch nahi ho sakta.\"", "An extremely qualified person doing very basic tasks.",
+      "\"Yahan aise hi chalta hai.\"", "The boss's nephew, who has no deadlines.",
+      "Doing the work while someone else gets the title.", "A file that moves faster because of who is carrying it.",
+      "Documenting my achievements, just in case.", "Applying elsewhere with a clear conscience.",
+      "\"Beta, tumhari shaadi kab hai?\"", "\"Salary kitni milti hai?\"",
+      "\"Aur bacche?\" asked for the fifth time.", "An aunty with a very detailed rishta proposal.",
+      "A polite smile and \"Yeh toh personal hai.\"", "A rishta proposal from someone I barely know at work.",
+      "Salary voyeurism in the washroom queue.", "Suddenly discussing cricket.",
+      "Calmly asking, \"Aap yeh kyun poochh rahe hain?\"", "\"Yeh mera zaati maamla hai, shukriya.\"",
+      "A stranger who knows my entire family tree.", "Being told I'm \"settling late.\"",
+      "The boss's spouse and their opinion on my life choices.", "Counting how many years someone has been married.",
+      "A question that should have stayed a thought.", "Raising one eyebrow and saying nothing.",
+      "A fluent \"Actually, basically, literally.\"", "Being judged by my school's name.",
+      "Accent policing.", "\"Aap ka background kya hai?\"",
+      "A VIP meeting I'm not \"VIP enough\" for.", "English-only meetings full of Urdu-only brilliance.",
+      "Laughing at someone's grammar instead of listening to their idea.", "A degree from abroad worn like a crown.",
+      "The \"cool kids\" table.", "Separate tea cups for different salary grades.",
+      "Judging someone's lunchbox.", "An idea in Urdu that was finally heard in English.",
+      "Respecting the cleaner as much as the CEO.", "Confidence in my own language.",
+      "Asking \"Kahan se hain?\" and meaning \"Kitne ameer?\"", "A last-name filter.",
+      "The smoking corner, where decisions are secretly made.", "A non-smoker standing there for \"networking.\"",
+      "An \"optional\" after-office hangout that isn't.", "\"Yaar, tum toh hamare group ke ho hi nahi.\"",
+      "A cricket-talk circle I wasn't invited into.", "Peer pressure with samosas.",
+      "A lunch invite that is secretly a loyalty test.", "Saying \"Aaj nahi, shukriya\" with a smile.",
+      "A \"ek minute\" chai break that lasts an hour.", "Eating alone with confidence.",
+      "A group photo that mysteriously excludes me.", "A friendly \"no\" delivered with warm chai.",
+      "Compulsory birthday-cake contributions.", "Friday \"mandatory fun.\"",
+      "Deep breaths in the stairwell.", "A 4 a.m. panic about a 9 a.m. meeting.",
+      "Eid holidays with the laptop open.", "Replying to emails during a family dinner.",
+      "Five peaceful minutes with a hot cup of chai.", "\"Bas ek aakhri kaam\" at 11 p.m.",
+      "Saying \"no\" without a three-page apology.", "Muting notifications on Sunday.",
+      "The Sunday scaries.", "Muscles clenched since Monday.",
+      "Forgetting what a hobby feels like.", "A boss who says \"Hum sab family hain\" and then cancels leave.",
+      "Running on chai and fumes.", "Burnout dressed up as \"dedication.\"",
+      "A weekend that was actually a weekend.", "Talking to someone I trust.",
+      "An appointment with a counselor.", "Load-shedding: the only excuse to rest.",
+      "A to-do list longer than the day.", "\"Main dekh ke bataata hoon,\" instead of \"Haan ji, abhi!\"",
+      "Leaving on time and feeling no guilt.", "A hobby that has nothing to do with work."
+    ];
+
+    const KIT_CARDS = [
+      { t: "BOUNDARIES", title: "Compliment - Decline - Redirect", script: "\"Aap ki fikar ka shukriya! Yeh main share nahi karunga. Waise, project kaisa chal raha hai?\"", desc: "Thank warmly, state boundary plainly, move to a neutral topic." },
+      { t: "BOUNDARIES", title: "Protect your time", script: "\"Main abhi doosre kaam par hoon. Aap bata dein kaun sa zyada zaroori hai?\"", desc: "Make them prioritize rather than accepting overload." },
+      { t: "BOUNDARIES", title: "Thinking time", script: "\"Mujhe sochne ka waqt chahiye. Main kal tak bata dunga.\"", desc: "You do not owe an instant yes. Buy yourself calm headspace." },
+      { t: "BOUNDARIES", title: "Opt out of gossip", script: "\"Main is baat mein nahi parunga. Chalo kaam ki baat karte hain.\"", desc: "Politely exit kirdar-kushi discussions." },
+      { t: "BOUNDARIES", title: "Go direct", script: "\"Mujhe nahi pata, aap unse seedha pooch lein.\"", desc: "Rumors die when they are politely bounced back to their source." },
+      { t: "BOUNDARIES", title: "After-hours line", script: "\"Office time ke baad available nahi hoon. Subah sab se pehle yeh dekhunga.\"", desc: "Set respectful expectations on late night pings." },
+      { t: "BOUNDARIES", title: "Name it, don't blame it", script: "\"Jab meeting mein baat kaat di jati hai, awkward lagta hai. Kya mukammal kar loon?\"", desc: "Address interruption without turning it into a fight." },
+      { t: "BOUNDARIES", title: "Shield your paper trail", script: "\"Record ke liye, yeh summary email kar raha/rahi hoon.\"", desc: "Keep credit traceable when parchi or rivals intervene." },
+      { t: "BOUNDARIES", title: "Warm \"No\"", script: "\"Aaj nahi, shukriya! Thinking of me means a lot.\"", desc: "Saying no can be gracious and comfortable." },
+      { t: "STRESS", title: "4-7-8 Breathing", script: "Inhale 4 counts, hold 7, exhale 8. Repeat 3 times.", desc: "Activates parasympathetic relaxation. Works in a stairwell." },
+      { t: "STRESS", title: "5-4-3-2-1 Grounding", script: "Notice 5 things you see, 4 feel, 3 hear, 2 smell, 1 taste.", desc: "Slows an immediate spiral or racing pulse." },
+      { t: "STRESS", title: "Urgent or just loud?", script: "\"Kya yeh sach mein urgent hai ya sirf shor hai?\"", desc: "Distinguish others' panic from genuine priority." },
+      { t: "STRESS", title: "Circle of Control", script: "Control your work, files & reactions; discard the rest.", desc: "Stop investing emotional energy into unfair office systems." },
+      { t: "WORK-LIFE", title: "Shutdown Ritual", script: "List tomorrow's top 3, shut lid: 'Aaj ka kaam khatam.'", desc: "A deliberate psychological switch between work and home." },
+      { t: "WORK-LIFE", title: "Mute for an hour", script: "Mute notifications for 60 min. The world won't end.", desc: "Disengage from compulsory responsiveness." },
+      { t: "WORK-LIFE", title: "Take your leave", script: "\"Rest is part of the job, not an emergency prize.\"", desc: "Apply for your legitimate leave without apologies." },
+      { t: "WORK-LIFE", title: "One thing that's yours", script: "Protect 1 weekly ritual totally untethered from work.", desc: "Cooking, football, family time, or chai alone." },
+      { t: "BURNOUT", title: "Know the 3 signs", script: "Exhaustion + Cynicism + Reduced sense of accomplishment.", desc: "Recognize occupational burnout before it harms health." },
+      { t: "BURNOUT", title: "Ask for help", script: "Speak to a trusted colleague, doctor, or counselor.", desc: "Asking for help is strategic resilience, not weakness." },
+      { t: "BURNOUT", title: "Celebrate others", script: "Congratulate a peer publicly on their win.", desc: "Break crab mentality and relieve collective competition." }
+    ];
+
+    /* =======================================================
+       GAME STATE & NETWORK ENGINE
+       ======================================================= */
+    let peer = null;
+    let connections = []; 
+    let hostConn = null;  
+
+    let myId = "";
+    let myName = localStorage.getItem("dd_premium_name") || "";
+    let isHost = false;
+    let roomCode = "";
+
+    // Authoritative game state
+    let state = {
+      phase: "LOBBY", // LOBBY, ROOM, SUBMITTING, JUDGING, REALITY_CHECK, ROUND_END, GAME_OVER
+      players: [],    // [{ id, name, dafterPts, calmPts, handWhite, handKit }]
+      judgeIdx: 0,
+      currentPrompt: null,
+      submissions: [], 
+      kitSubmissions: [], 
+      realityTimer: 60,
+      roundWinner: null,
+      calmWinner: null,
+      whiteDeck: [],
+      promptDeck: [],
+      roundNumber: 1
+    };
+
+    let timerInterval = null;
+    let selectedWhiteCards = []; // card INDICES within me.handWhite
+    let lastRoundKey = "";
+    let activeTab = "home"; // home, game, leaderboard, guide
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    /* Network Initialization */
+    function initPeer(customCode = null, onReady = null) {
+      const id = customCode ? "ddp-" + customCode.toLowerCase() : "ddp-" + Math.random().toString(36).substring(2, 7);
+      peer = new Peer(id);
+      
+      peer.on('open', (id) => {
+        myId = id;
+        if (onReady) onReady(id);
+      });
+
+      peer.on('connection', (conn) => {
+        if (!isHost) return;
+        connections.push(conn);
+        conn.on('data', (data) => handleHostIncomingData(conn, data));
+        conn.on('close', () => {
+          connections = connections.filter(c => c !== conn);
+          const wasJudge = state.players[state.judgeIdx] && state.players[state.judgeIdx].id === conn.peer;
+          const leftName = (state.players.find(p => p.id === conn.peer) || {}).name || "A player";
+          state.players = state.players.filter(p => p.id !== conn.peer);
+          state.submissions = state.submissions.filter(s => s.playerId !== conn.peer);
+          state.kitSubmissions = state.kitSubmissions.filter(k => k.playerId !== conn.peer);
+          if (state.players.length > 0 && state.phase !== "LOBBY" && state.phase !== "ROOM") {
+            state.judgeIdx = state.judgeIdx % state.players.length;
+            if (wasJudge && state.phase === "JUDGING") {
+              // Judge left with no one to pick: move to next round
+              state.judgeIdx = (state.judgeIdx + 1) % state.players.length;
+              state.roundNumber++;
+              startNewRound();
+              return;
+            }
+            if (wasJudge && state.phase === "SUBMITTING" && state.submissions.length >= state.players.length - 1) {
+              state.phase = "JUDGING";
+              state.submissions = shuffle(state.submissions);
+            }
+          }
+          broadcastState();
+        });
+      });
+
+      peer.on('error', (err) => {
+        if (err.type === 'unavailable-id') {
+          alert("Room code is already in use. Please pick another code or rejoin.");
+        }
+      });
+    }
+
+    function broadcastState() {
+      if (!isHost) return;
+      connections.forEach(conn => {
+        if (conn.open) conn.send({ type: "SYNC", state });
+      });
+      render();
+    }
+
+    function sendToHost(action) {
+      if (isHost) {
+        handleAction(myId, action);
+      } else if (hostConn && hostConn.open) {
+        hostConn.send(action);
+      }
+    }
+
+    function handleHostIncomingData(conn, action) {
+      handleAction(conn.peer, action);
+    }
+
+    /* Server Logic (Host Only) */
+    function handleAction(senderId, action) {
+      if (!isHost) return;
+
+      if (action.type === "JOIN") {
+        if (state.players.length >= 25) {
+          const c = connections.find(x => x.peer === senderId);
+          if (c && c.open) c.send({ type: "ROOM_FULL" });
+          setTimeout(() => { try { c.close(); } catch(e) {} }, 300);
+          return;
+        }
+        if (!state.players.find(p => p.id === senderId)) {
+          state.players.push({
+            id: senderId,
+            name: action.name || "Colleague",
+            dafterPts: 0,
+            calmPts: 0,
+            handWhite: shuffle(ANSWERS).slice(0, 7),
+            handKit: shuffle(KIT_CARDS).slice(0, 2)
+          });
+        }
+        broadcastState();
+      }
+      else if (action.type === "START_GAME") {
+        state.promptDeck = shuffle(PROMPTS);
+        state.whiteDeck = shuffle(ANSWERS);
+        
+        state.players.forEach(p => {
+          p.handWhite = state.whiteDeck.splice(0, 7);
+          p.handKit = shuffle(KIT_CARDS).slice(0, 2);
+          p.dafterPts = 0;
+          p.calmPts = 0;
+        });
+        state.judgeIdx = 0;
+        state.roundNumber = 1;
+        startNewRound();
+      }
+      else if (action.type === "SUBMIT_ANSWER") {
+        if (state.phase !== "SUBMITTING") return;
+        if (!state.submissions.find(s => s.playerId === senderId)) {
+          state.submissions.push({ playerId: senderId, cards: action.cards });
+          const p = state.players.find(pl => pl.id === senderId);
+          if (p) {
+            p.handWhite = p.handWhite.filter(c => !action.cards.includes(c));
+          }
+        }
+        if (state.submissions.length >= state.players.length - 1) {
+          state.phase = "JUDGING";
+          state.submissions = shuffle(state.submissions);
+        }
+        broadcastState();
+      }
+      else if (action.type === "PICK_WINNER") {
+        if (state.phase !== "JUDGING") return;
+        const winner = state.players.find(p => p.id === action.winnerId);
+        if (winner) {
+          winner.dafterPts += 1;
+          state.roundWinner = winner.name;
+        }
+        state.phase = "REALITY_CHECK";
+        state.realityTimer = 60;
+        state.kitSubmissions = [];
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+          state.realityTimer--;
+          if (state.realityTimer <= 0) clearInterval(timerInterval);
+          broadcastState();
+        }, 1000);
+        broadcastState();
+      }
+      else if (action.type === "SUBMIT_KIT") {
+        if (state.phase !== "REALITY_CHECK") return;
+        if (!state.kitSubmissions.find(k => k.playerId === senderId)) {
+          state.kitSubmissions.push({ playerId: senderId, card: action.card });
+          const p = state.players.find(pl => pl.id === senderId);
+          if (p) {
+            p.handKit = p.handKit.filter(c => c.title !== action.card.title);
+          }
+        }
+        broadcastState();
+      }
+      else if (action.type === "AWARD_CALM_POINT") {
+        if (state.phase !== "REALITY_CHECK") return;
+        if (timerInterval) clearInterval(timerInterval);
+        if (action.winnerId) {
+          const calmWinner = state.players.find(p => p.id === action.winnerId);
+          if (calmWinner) {
+            calmWinner.calmPts += 1;
+            state.calmWinner = calmWinner.name;
+          }
+        } else {
+          state.calmWinner = "No one";
+        }
+        state.phase = "ROUND_END";
+        checkEndOrRefill();
+        broadcastState();
+      }
+      else if (action.type === "NEXT_ROUND") {
+        if (state.phase !== "ROUND_END") return;
+        state.judgeIdx = (state.judgeIdx + 1) % state.players.length;
+        state.roundNumber++;
+        startNewRound();
+      }
+    }
+
+    function startNewRound() {
+      if (state.promptDeck.length === 0) state.promptDeck = shuffle(PROMPTS);
+      state.currentPrompt = state.promptDeck.pop();
+      state.submissions = [];
+      state.kitSubmissions = [];
+      state.roundWinner = null;
+      state.calmWinner = null;
+      state.phase = "SUBMITTING";
+      broadcastState();
+    }
+
+    function checkEndOrRefill() {
+      state.players.forEach(p => {
+        while (p.handWhite.length < 7) {
+          if (state.whiteDeck.length === 0) state.whiteDeck = shuffle(ANSWERS);
+          p.handWhite.push(state.whiteDeck.pop());
+        }
+        while (p.handKit.length < 2) {
+          p.handKit.push(shuffle(KIT_CARDS)[0]);
+        }
+      });
+
+      // Win Condition: 7 combined points, min 2 calm points[cite: 2]
+      const victor = state.players.find(p => (p.dafterPts + p.calmPts >= 7) && p.calmPts >= 2);
+      if (victor) {
+        state.phase = "GAME_OVER";
+      }
+    }
+
+    function joinRoomAsClient(code, name) {
+      roomCode = code.toUpperCase();
+      initPeer(null, () => {
+        hostConn = peer.connect("ddp-" + roomCode.toLowerCase());
+        hostConn.on('open', () => {
+          hostConn.send({ type: "JOIN", name });
+        });
+        hostConn.on('data', (msg) => {
+          if (msg.type === "ROOM_FULL") {
+            alert("That room is full (25 players max). Try another room.");
+            location.reload();
+            return;
+          }
+          if (msg.type === "SYNC") {
+            // Auto switch to game tab when host starts the game
+            if (state.phase === "ROOM" && msg.state.phase === "SUBMITTING") {
+              activeTab = "game";
+            }
+            state = msg.state;
+            render();
+          }
+        });
+        hostConn.on('close', () => {
+          alert("Disconnected from host room.");
+          location.reload();
+        });
+      });
+    }
+
+    /* =======================================================
+       UI RENDERING
+       ======================================================= */
+    function switchTab(t) {
+      activeTab = t;
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      const activeEl = document.getElementById('tab-' + t);
+      if (activeEl) activeEl.classList.add('active');
+      render();
+    }
+
+    function toggleSelectWhiteCard(cardText, max) {
+      if (selectedWhiteCards.includes(cardText)) {
+        selectedWhiteCards = selectedWhiteCards.filter(c => c !== cardText);
+      } else {
+        if (selectedWhiteCards.length < max) {
+          selectedWhiteCards.push(cardText);
+        } else if (max === 1) {
+          selectedWhiteCards = [cardText];
+        }
+      }
+      render();
+    }
+
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    function copyRoomCode() {
+      const done = () => alert("Room Code " + roomCode + " copied!");
+      const fallback = () => {
+        const ta = document.createElement('textarea');
+        ta.value = roomCode; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch(e) { prompt("Copy this code:", roomCode); }
+        document.body.removeChild(ta);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(roomCode).then(done).catch(fallback);
+      } else { fallback(); }
+    }
+
+    // Cards are selected by INDEX (not text) so quotes in card text can't break the HTML
+    function toggleSelectWhiteCard(idx, max) {
+      if (selectedWhiteCards.includes(idx)) {
+        selectedWhiteCards = selectedWhiteCards.filter(i => i !== idx);
+      } else if (selectedWhiteCards.length < max) {
+        selectedWhiteCards.push(idx);
+      } else if (max === 1) {
+        selectedWhiteCards = [idx];
+      }
+      render();
+    }
+
+    function submitAnswer() {
+      const me = state.players.find(p => p.id === myId);
+      if (!me) return;
+      const cards = selectedWhiteCards.map(i => me.handWhite[i]).filter(Boolean);
+      selectedWhiteCards = [];
+      sendToHost({ type: 'SUBMIT_ANSWER', cards });
+    }
+
+    function playKitCard(idx) {
+      const me = state.players.find(p => p.id === myId);
+      if (!me || !me.handKit[idx]) return;
+      sendToHost({ type: 'SUBMIT_KIT', card: { t: me.handKit[idx].t, title: me.handKit[idx].title, script: me.handKit[idx].script } });
+    }
+
+    function render() {
+      const app = document.getElementById("app");
+      const nav = document.getElementById("bottomNav");
+      const me = state.players.find(p => p.id === myId) || { name: myName, handWhite: [], handKit: [], dafterPts: 0, calmPts: 0 };
+      const currentJudge = state.players[state.judgeIdx] || { name: "Judge" };
+      const isJudge = currentJudge.id === myId;
+
+      let html = "";
+
+      // 1. LOBBY SCREEN[cite: 15]
+      if (state.phase === "LOBBY") {
+        nav.style.display = "none";
+        html = `
+          <div class="screen active" style="padding-top: 60px;">
+            <h1 class="logo">
+              <span class="logo-accent">Dafter</span>
+              Drama <span style="color:var(--gold);">☕</span>
+            </h1>
+            
+            <div class="input-group" style="margin-top: 50px;">
+              <label class="input-label">Colleague Name</label>
+              <input type="text" id="nameInput" class="input" value="${myName}" placeholder="e.g. Asad">
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">Room Code</label>
+              <input type="text" id="codeInput" class="input" placeholder="Leave blank to host">
+            </div>
+
+            <div class="btn-row" style="margin-top: 40px;">
+              <button onclick="document.getElementById('codeInput').value ? hostRoom(false) : hostRoom(true)" class="btn btn-outline" style="flex: 1;">
+                ☕ HOST
+              </button>
+              <button onclick="hostRoom(false)" class="btn" style="flex: 1;">
+                🔗 JOIN
+              </button>
+            </div>
+          </div>
+        `;
+      } 
+      // 2. ROOM (HOME) SCREEN[cite: 15]
+      else if (activeTab === "home") {
+        nav.style.display = "flex";
+        html = `
+          <div class="header">
+            <button class="header-btn" onclick="location.reload()">
+              <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg> Back
+            </button>
+            <div class="header-title">ROOM: <span style="color:var(--gold);">${roomCode}</span></div>
+            <button class="header-btn" onclick="copyRoomCode()">
+              <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+            </button>
+          </div>
+          
+          <div class="screen active">
+            <h2 style="font-size: 1rem; color: var(--text-muted); margin: 10px 0 16px 0;">Player List (${state.players.length}/25)</h2>
+            <div class="list-container">
+              ${state.players.map((p, i) => `
+                <div class="list-item">
+                  <div class="avatar c${(i % 4) + 1}">${esc(p.name.charAt(0).toUpperCase())}</div>
+                  <div class="player-name">${esc(p.name)}${p.id === myId ? '<span style="color:var(--text-muted); font-size:0.8rem;">(You)</span>' : ''}</div>
+                  <div style="color: var(--gold);">☕</div>
+                </div>
+              `).join('')}
+            </div>
+
+            ${isHost && state.phase === "ROOM" ? `
+              <div style="margin-top: 30px;">
+                <button onclick="sendToHost({type: 'START_GAME'}); switchTab('game');" class="btn">
+                  🏁 START GAME
+                </button>
+                <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 10px;">(enabled for the host)</div>
+              </div>
+            ` : ''}
+
+            ${state.phase !== "ROOM" ? `
+              <div class="status-box">
+                <h3 style="color: var(--gold); margin-bottom: 8px;">Game is Active</h3>
+                <p style="font-size: 0.9rem; color: var(--text-muted);">Tap the "Table" icon below to view the current prompt.</p>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+      // 3. GAME TABLE SCREEN[cite: 15]
+      else if (activeTab === "game") {
+        nav.style.display = "flex";
+        const prompt = state.currentPrompt || { t: "WAITING", q: "Waiting for host to start the drama..." };
+        const rk = state.roundNumber + '|' + (state.currentPrompt ? state.currentPrompt.q : '');
+        if (state.phase === "SUBMITTING" && rk !== lastRoundKey) { lastRoundKey = rk; selectedWhiteCards = []; }
+        const isPick2 = prompt.q.includes("[PICK 2]");
+        const maxPicks = isPick2 ? 2 : 1;
+        
+        html = `
+          <div class="header">
+            <button class="header-btn" onclick="switchTab('home')">
+              <svg viewBox="0 0 24 24"><path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/></svg> Room
+            </button>
+            <div class="header-title">Prompt</div>
+            <div style="width: 60px; text-align: right; font-size: 0.75rem; color: var(--gold);">RND ${state.roundNumber}</div>
+          </div>
+
+          <div class="screen active">
+            ${state.phase === "ROOM" ? `
+              <div class="status-box" style="margin-top: 50px;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">☕</div>
+                <h3 style="color: var(--gold);">Chai is Brewing...</h3>
+                <p style="color: var(--text-muted); margin-top: 8px;">Waiting for the host to start the game.</p>
+              </div>
+            ` : `
+              <div class="card-prompt">
+                <div class="text">${prompt.q.replace(/_______/g, "___________")}</div>
+                <div class="tag">${prompt.t} &bull; ${isPick2 ? 'PICK 2' : 'PICK 1'}</div>
+              </div>
+
+              ${state.phase === "SUBMITTING" ? `
+                ${isJudge ? `
+                  <div class="status-box">
+                    <div style="font-size: 2.5rem; margin-bottom: 10px;">👑</div>
+                    <h3 style="color: var(--gold); margin-bottom: 10px;">You are the Judge</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Sit back. Waiting for colleagues to submit their answers (${state.submissions.length}/${state.players.length - 1})...</p>
+                  </div>
+                ` : `
+                  <div class="section-header">
+                    <div class="section-title">Your Hand</div>
+                    <div class="timer-text">Pick ${maxPicks}</div>
+                  </div>
+                  <div class="cards-scroll">
+                    ${me.handWhite.map((c, idx) => `
+                      <div class="card-answer ${selectedWhiteCards.includes(idx) ? 'selected' : ''}" onclick="toggleSelectWhiteCard(${idx}, ${maxPicks})">
+                        <div class="text">${c}</div>
+                        <div class="check">✓</div>
+                      </div>
+                    `).join('')}
+                  </div>
+                  <button class="btn" onclick="submitAnswer()" ${selectedWhiteCards.length !== maxPicks ? 'disabled' : ''}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> SUBMIT
+                  </button>
+                `}
+              ` : ''}
+
+              ${state.phase === "JUDGING" ? `
+                <div class="section-header">
+                  <div class="section-title">Submitted Answers</div>
+                  <div class="timer-text">${isJudge ? 'Tap to Pick' : 'Judge is reading'}</div>
+                </div>
+                <div class="cards-scroll">
+                  ${state.submissions.map(s => `
+                    <div class="card-answer" onclick="${isJudge ? `sendToHost({type: 'PICK_WINNER', winnerId: '${s.playerId}'})` : ''}">
+                      <div class="text">${s.cards.join('<br><span style="color:var(--gold); font-size:0.8rem;">AND</span><br>')}</div>
+                      ${isJudge ? '<div class="check" style="display:flex; background:var(--surface); color:var(--gold);">?</div>' : ''}
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+
+              ${state.phase === "REALITY_CHECK" ? `
+                <div class="section-header">
+                  <div class="section-title">Reality Check</div>
+                  <div class="timer-text"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg> ${state.realityTimer}s</div>
+                </div>
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 16px;">
+                  What does a healthy response look like?
+                </p>
+
+                ${!isJudge ? `
+                  <h4 style="color: var(--gold); margin-bottom: 10px; font-size: 0.9rem;">Play a Kit Card:</h4>
+                  ${me.handKit.map((k, idx) => `
+                    <div class="card-kit" onclick="playKitCard(${idx})">
+                      <div class="tag">${k.t}</div>
+                      <div class="title">${k.title}</div>
+                      <div class="script">${k.script}</div>
+                    </div>
+                  `).join('')}
+                ` : `
+                  <h4 style="color: var(--gold); margin-bottom: 10px; font-size: 0.9rem;">Played by Colleagues (Tap to award 1 Calm Point):</h4>
+                  ${state.kitSubmissions.length === 0 ? '<p style="color: var(--text-muted); font-size: 0.9rem;">No kit cards played yet.</p>' : ''}
+                  ${state.kitSubmissions.map(ks => `
+                    <div class="card-kit" onclick="sendToHost({type: 'AWARD_CALM_POINT', winnerId: '${ks.playerId}'})">
+                      <div class="tag">${ks.card.t}</div>
+                      <div class="title">${ks.card.title}</div>
+                      <div class="script">${ks.card.script}</div>
+                    </div>
+                  `).join('')}
+                  <button class="btn btn-outline" style="margin-top: 15px;" onclick="sendToHost({type: 'AWARD_CALM_POINT', winnerId: null})">Skip Calm Point</button>
+                `}
+              ` : ''}
+
+              ${state.phase === "ROUND_END" ? `
+                <div class="status-box">
+                  <h3 style="color: var(--gold); margin-bottom: 12px;">Round Results</h3>
+                  <p style="margin-bottom: 6px;">Dafter Point: <strong>${esc(state.roundWinner || 'None')}</strong></p>
+                  <p style="margin-bottom: 20px;">Calm Point: <strong>${esc(state.calmWinner || 'None')}</strong></p>
+                  ${isHost ? `<button class="btn" onclick="sendToHost({type: 'NEXT_ROUND'})">Next Round ➔</button>` : `<p style="font-size:0.8rem; color:var(--text-muted);">Waiting for host...</p>`}
+                </div>
+              ` : ''}
+
+              ${state.phase === "GAME_OVER" ? `
+                <div class="status-box">
+                  <div style="font-size: 3rem; margin-bottom: 10px;">🏆</div>
+                  <h2 style="color: var(--gold); margin-bottom: 12px;">Office Survived!</h2>
+                  <p style="margin-bottom: 20px; font-size: 0.95rem; color: var(--text-muted);">Someone reached 7 points with at least 2 calm points. Check the Profile tab for the final standings!</p>
+                  ${isHost ? `<button class="btn" onclick="sendToHost({type: 'START_GAME'})">Play Again</button>` : ''}
+                </div>
+              ` : ''}
+            `}
+          </div>
+        `;
+      }
+      // 4. LEADERBOARD SCREEN[cite: 15]
+      else if (activeTab === "leaderboard") {
+        nav.style.display = "flex";
+        html = `
+          <div class="header">
+            <div class="header-title" style="margin: 0 auto;">DAFTERI PROFILE</div>
+          </div>
+          <div class="screen active">
+            <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+              <div style="width: 110px; height: 110px; border-radius: 50%; border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; font-size: 3.5rem; background: var(--surface); box-shadow: 0 0 20px rgba(227, 179, 90, 0.1);">☕</div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 30px; border-bottom: 1px solid var(--surface-light); padding-bottom: 20px;">
+              <div><div style="font-size:1.6rem; font-weight:bold; color:var(--text);">${me.dafterPts}</div><div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Dafter Pts</div></div>
+              <div><div style="font-size:1.6rem; font-weight:bold; color:var(--text);">${me.calmPts}</div><div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Calm Pts</div></div>
+              <div><div style="font-size:1.6rem; font-weight:bold; color:var(--text);">${me.dafterPts + me.calmPts}</div><div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Total</div></div>
+            </div>
+            
+            <h3 style="font-size: 0.9rem; margin-bottom: 12px; color: var(--text-muted); text-transform:uppercase; letter-spacing: 1px;">Live Rankings</h3>
+            <div class="list-container">
+              ${[...state.players].sort((a,b) => (b.dafterPts+b.calmPts) - (a.dafterPts+a.calmPts)).map((p, i) => `
+                <div class="list-item">
+                  <div style="color: var(--gold); font-weight: bold; width: 20px; font-size: 1.1rem;">${i+1}</div>
+                  <div class="player-name">${esc(p.name)}${p.id === myId ? '<span style="color:var(--text-muted); font-size:0.8rem;">(You)</span>' : ''}</div>
+                  <div style="font-size: 0.9rem; display: flex; gap: 8px;">
+                    <span style="color: var(--text-muted);">${p.dafterPts}D</span>
+                    <span style="color: var(--kit-border);">${p.calmPts}C</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <div class="badge-grid" style="margin-top: 30px;">
+              <div><div class="badge-icon">🗣️</div><div class="badge-label">Gossip Survivor</div></div>
+              <div><div class="badge-icon">👔</div><div class="badge-label">Meeting Master</div></div>
+              <div><div class="badge-icon">🤝</div><div class="badge-label">Office Diplomat</div></div>
+            </div>
+          </div>
+        `;
+      }
+      // 5. GUIDE SCREEN
+      else if (activeTab === "guide") {
+        nav.style.display = "flex";
+        html = `
+          <div class="header">
+            <div class="header-title" style="margin: 0 auto;">SURVIVAL GUIDE</div>
+          </div>
+          <div class="screen active">
+            <div class="card-prompt" style="min-height: auto; padding: 20px; border-color: var(--surface-light);">
+              <h3 style="color: var(--gold); margin-bottom: 10px;">How to Win</h3>
+              <p style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 15px;">
+                First player to <strong>7 total points</strong> wins, but you MUST have at least <strong>2 Calm Points</strong>[cite: 2]. Funny alone isn't enough; you must prove you can handle office drama.
+              </p>
+              <h3 style="color: var(--gold); margin-bottom: 10px;">House Rules</h3>
+              <ul style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; padding-left: 20px; margin-bottom: 10px;">
+                <li><strong>No real names.</strong> Don't use actual colleagues.[cite: 2]</li>
+                <li><strong>Confidentiality.</strong> What's said at the chai table stays at the chai table.[cite: 2]</li>
+                <li><strong>Pass is fine.</strong> You can skip the Reality Check if you don't want to share.[cite: 2]</li>
+              </ul>
+            </div>
+          </div>
+        `;
+      }
+
+      app.innerHTML = html;
+      document.querySelectorAll('.nav-item').forEach(el => {
+        if(el.id === 'tab-' + activeTab) el.classList.add('active');
+      });
+    }
+
+    function hostRoom(isHosting) {
+      const name = document.getElementById("nameInput").value.trim() || "Player";
+      localStorage.setItem("dd_premium_name", name);
+      myName = name;
+      
+      if (isHosting) {
+        isHost = true;
+        roomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+        state.phase = "ROOM";
+        initPeer(roomCode, () => {
+          state.players = [{ 
+            id: myId, name: myName, dafterPts: 0, calmPts: 0, 
+            handWhite: shuffle(ANSWERS).slice(0, 7), 
+            handKit: shuffle(KIT_CARDS).slice(0, 2) 
+          }];
+          activeTab = "home";
+          render();
+        });
+      } else {
+        const code = document.getElementById("codeInput").value.trim();
+        if (!code) return alert("Enter a room code!");
+        isHost = false;
+        state.phase = "ROOM";
+        activeTab = "home";
+        joinRoomAsClient(code, myName);
+      }
+    }
+
+    window.addEventListener('beforeunload', () => { if (peer) { try { peer.destroy(); } catch(e) {} } });
+
+    // Initialize UI
+    render();
+  </script>
+</body>
+</html>
